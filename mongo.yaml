@@ -1,0 +1,61 @@
+# Commonly you have the service definition and the deployment definition
+# in the same file.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo-deployment
+  labels:
+    app: mongo
+spec: # This is the spec for the deployment
+  replicas: 1
+  selector: # This is the selector for the deployment. All the pods that are
+    # created by this deployment will have this label. This is the association
+    # between the pods and the deployment. All the pods here have the label app:mongo
+
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec: # This is the spec for the pod
+      containers: # This is the container spec. We can have multiple containers
+        # in a pod, but mostly one application per pod.
+        - name: mongodb
+          image: mongo:5.0
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 27017
+          env:
+            - name: MONGO_INITDB_ROOT_USERNAME # This is the username for the
+              # root user. We are getting the value from the secret by using the
+              # valueFrom section
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: mongo-user
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: mongo-password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-service
+spec:
+  selector: # This is the selector for the service. All the pods that have this
+    #     # label will be part of this service. This is the association between the
+    #     # service and the pods. All the pods here have the label app:mongo
+    app: mongo
+  ports:
+    - protocol: TCP
+      port: 27017 # This is the port that the service will listen on
+      targetPort: 27017 # This is the port that the pods are listening on

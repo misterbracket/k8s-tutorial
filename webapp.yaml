@@ -1,0 +1,68 @@
+# Commonly you have the service definition and the deployment definition
+# in the same file.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp-deployment
+  labels:
+    app: webapp
+spec: # This is the spec for the deployment
+  replicas: 1
+  selector: # This is the selector for the deployment. All the pods that are
+    # created by this deployment will have this label. This is the association
+    # between the pods and the deployment. All the pods here have the label app:webapp
+    matchLabels:
+      app: webapp
+  template: # This is the pod template within the deployment
+    metadata:
+      labels:
+        app: webapp
+    spec: # This is the pod spec
+      containers: # This is the container spec. We can have multiple containers
+        # in a pod, but mostly one application per pod.
+        - name: webapp
+          image: nanajanashia/k8s-demo-app:v1.0
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 3000
+          env:
+            - name: USER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: mongo-user
+            - name: USER_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: mongo-secret
+                  key: mongo-password
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef: # Reference to the config map
+                  name: mongo-config
+                  key: mongo-url
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service
+spec:
+  type:
+    NodePort # This is the type of service. NodePort exposes the service on a port on the node. This is the
+    # port that we will use to access the service from outside the cluster.
+  selector: # This is the selector for the service. All the pods that have this
+    # label will be part of this service. This is the association between the
+    # service and the pods. All the pods here have the label app:nginx
+    app: webapp
+  ports:
+    - protocol: TCP
+      port: 8080 # This is the port that the service will listen on
+      targetPort: 3000 # This is the port that the pods are listening on
+      nodePort: 30100 # This is the port that the service will listen on the node. Must be between 30000 and 32767
